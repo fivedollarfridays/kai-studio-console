@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Pinned to a specific Ubuntu release, not the floating `ubuntu-latest` --
+# GitHub moving that label out from under a pinned toolchain has broken CI
+# here before.
+jobs:
+  ruff:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install "ruff==0.16.0"
+      - run: ruff check .
+      - run: ruff format --check .
+
+  mypy:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -e . "mypy==2.4.0"
+      - run: mypy --ignore-missing-imports kai_slice
+
+  pytest:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      # Installed explicitly: every `requires_ffmpeg` test skips without it,
+      # so a runner image that dropped ffmpeg would go green with the
+      # end-to-end path unrun.
+      - run: sudo apt-get update && sudo apt-get install -y ffmpeg
+      - run: pip install -e ".[dev]"
+      # The real STT decode path (no replay, no model) -- the regression
+      # that let an incompatible `av` ship while the rest of the suite
+      # stayed green on KAI_SLICE_STT_REPLAY_DIR. Run first and by name so
+      # its failure is never buried in the full-suite output.
+      - run: pytest tests/test_transcribe_decode.py -v
+      - run: pytest -v

@@ -1,0 +1,47 @@
+[project]
+name = "kai-slice"
+version = "0.1.0"
+description = "A laptop-local, offline capture -> transcribe -> decide -> act pipeline"
+requires-python = ">=3.11"
+dependencies = [
+    "faster-whisper>=1.0,<2",
+    "jsonschema>=4,<5",
+    # faster-whisper 1.2.1 declares av>=11 with no upper bound; av 19.0.0
+    # dropped the metadata_errors kwarg faster_whisper.audio.decode_audio
+    # passes to av.open, so an unpinned install crashes every decode (empirically
+    # verified in a fresh venv: av==18.1.0 decodes, av==19.0.0 raises
+    # TypeError -- tests/test_transcribe_decode.py pins this with a real
+    # decode, no replay).
+    "av>=11,<19",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8,<9",
+    "ruff==0.16.0",
+]
+# Only for scripts/capture-console-screenshot (regenerating docs/console.png);
+# not a runtime dependency of kai_slice and not needed for `dev`/tests/CI.
+screenshot = [
+    "playwright==1.58.0",
+]
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["kai_slice"]
+
+[tool.setuptools.package-data]
+kai_slice = ["schemas/*.json"]
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+extend-select = ["E402", "E731", "B", "C901"]
+
+[tool.mypy]
+python_version = "3.11"
+ignore_missing_imports = true

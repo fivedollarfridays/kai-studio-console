@@ -1,0 +1,217 @@
+#!/usr/bin/env python3
+"""scripts/make-sample <source clip> — raw clip -> the shipped demo card.
+
+Transcodes to 720p H.264/AAC at or under a byte budget (so the card lives in
+git with no LFS), lays it out as a one-clip card directory, and writes its
+sha256 manifest plus a provenance line in ``samples/README.md``. Opens no
+network connection. The transcode keeps one video and one audio stream and
+drops the camera's metadata: no recording time, GPS/location tag, chapters,
+timecode (tmcd) or data tracks reach the shipped clip. Run on the owner's delivered clip (real provenance) or
+on ``scripts/make-stand-in-sample``'s synthetic output (stand-in provenance)
+-- the card this writes is whatever ``--provenance`` says it is.
+"""
+
+from __future__ import annotations
+
+import argparse
+import hashlib
+import json
+import re
+import subprocess
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+from kai_slice.probe import duration as probe_duration
+
+DEFAULT_CLIP_NAME = "CLIP_0001.mp4"
+DEFAULT_RESOLUTION = "1280x720"
+DEFAULT_MAX_BYTES = 25 * 1024 * 1024
+DEFAULT_AUDIO_KBPS = 96
+_MIN_VIDEO_KBPS = 100
+_BACKOFF = 0.65
+
+
+def _encode(
+    source: Path, dest: Path, *, resolution: str, video_kbps: float, audio_kbps: int
+) -> None:
+    w, h = resolution.split("x")
+    scale = f"scale={w}:{h}:force_original_aspect_ratio=decrease,pad={w}:{h}:(ow-iw)/2:(oh-ih)/2"
+    subprocess.run(
+        [
+            "ffmpeg",
+            "-y",
+            "-i",
+            str(source),
+            # one video + the audio only: a camera's tmcd timecode, its
+            # telemetry data tracks and any cover-art stream stay behind
+            "-map",
+            "0:v:0",
+            "-map",
+            "0:a:0?",
+            "-dn",
+            "-sn",
+            # no recording time, GPS/location or chapters from the camera
+            "-map_metadata",
+            "-1",
+            "-map_chapters",
+            "-1",
+            "-write_tmcd",
+            "0",
+            "-vf",
+            scale,
+            "-c:v",
+            "libx264",
+            "-b:v",
+            f"{video_kbps:.0f}k",
+            "-maxrate",
+            f"{video_kbps:.0f}k",
+            "-bufsize",
+            f"{2 * video_kbps:.0f}k",
+            "-pix_fmt",
+            "yuv420p",
+            "-c:a",
+            "aac",
+            "-b:a",
+            f"{audio_kbps}k",
+            str(dest),
+        ],
+        check=True,
+        capture_output=True,
+    )
+
+
+def transcode_under_budget(
+    source: Path,
+    dest: Path,
+    *,
+    max_bytes: int = DEFAULT_MAX_BYTES,
+    resolution: str = DEFAULT_RESOLUTION,
+    audio_kbps: int = DEFAULT_AUDIO_KBPS,
+    attempts: int = 5,
+) -> int:
+    """Encode ``source`` to ``dest`` at or under ``max_bytes``, backing off
+    the video bitrate and retrying when an attempt overshoots. Raises
+    ``RuntimeError`` if ``attempts`` all overshoot."""
+    dest = Path(dest)
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    seconds = probe_duration(source)
+    target_total_kbps = (max_bytes * 8 / 1024) / seconds * 0.85
+    video_kbps = max(target_total_kbps - audio_kbps, _MIN_VIDEO_KBPS)
+    size = None
+    for _ in range(attempts):
+        _encode(source, dest, resolution=resolution, video_kbps=video_kbps, audio_kbps=audio_kbps)
+        size = dest.stat().st_size
+        if size <= max_bytes:
+            return size
+        video_kbps *= _BACKOFF
+    raise RuntimeError(f"could not transcode {source} under {max_bytes} bytes (last size={size})")
+
+
+def _manifest(card_dir: Path, clip_names: list[str]) -> dict:
+    files = []
+    for name in clip_names:
+        path = card_dir / name
+        digest = hashlib.sha256(path.read_bytes()).hexdigest()
+        files.append({"name": name, "bytes": path.stat().st_size, "sha256": digest})
+    manifest = {"files": files}
+    (card_dir / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
+    return manifest
+
+
+def _section_with(old_section: str, card_name: str, provenance: str) -> str:
+    """``old_section`` with its first paragraph (the provenance) replaced;
+    every later paragraph is kept as written."""
+    body = old_section.partition("\n")[2].strip("\n")
+    paragraphs = body.split("\n\n", 1)
+    rest = paragraphs[1].strip("\n") if len(paragraphs) > 1 else ""
+    section = f"## {card_name}\n\n{provenance}\n"
+    if rest:
+        section += f"\n{rest}\n"
+    return section + ("\n" if old_section.endswith("\n\n") else "")
+
+
+def _check_provenance(provenance: str) -> None:
+    """The provenance is the section's FIRST paragraph -- a blank line in it
+    would be read back as the section's prose on the next re-run."""
+    if "\n\n" in provenance.strip("\n"):
+        raise ValueError("--provenance must be one paragraph (no blank line in it)")
+
+
+def update_samples_readme(samples_dir: Path, *, card_name: str, provenance: str) -> Path:
+    """Create or update ``samples/README.md``'s ``## <card_name>`` section
+    with ``provenance`` as its first paragraph. Any later paragraphs of that
+    section, and every other card's section, are kept untouched."""
+    _check_provenance(provenance)
+    samples_dir = Path(samples_dir)
+    samples_dir.mkdir(parents=True, exist_ok=True)
+    readme = samples_dir / "README.md"
+    section = f"## {card_name}\n\n{provenance}\n"
+    if not readme.is_file():
+        readme.write_text(
+            "# Samples\n\nProvenance for every sample card in this directory.\n\n" + section
+        )
+        return readme
+    text = readme.read_text()
+    pattern = re.compile(rf"(?ms)^## {re.escape(card_name)}(?:\n|\Z).*?(?=^## |\Z)")
+    match = pattern.search(text)
+    if match:
+        new = _section_with(match.group(0), card_name, provenance)
+        text = text[: match.start()] + new + text[match.end() :]
+    else:
+        text = text.rstrip("\n") + "\n\n" + section
+    readme.write_text(text)
+    return readme
+
+
+def make_sample(
+    source: Path,
+    samples_dir: Path,
+    *,
+    card_name: str = "card-01",
+    clip_name: str = DEFAULT_CLIP_NAME,
+    provenance: str,
+    resolution: str = DEFAULT_RESOLUTION,
+    max_bytes: int = DEFAULT_MAX_BYTES,
+) -> dict:
+    _check_provenance(provenance)  # before anything is written
+    card_dir = Path(samples_dir) / card_name
+    card_dir.mkdir(parents=True, exist_ok=True)
+    size = transcode_under_budget(
+        source, card_dir / clip_name, max_bytes=max_bytes, resolution=resolution
+    )
+    manifest = _manifest(card_dir, [clip_name])
+    update_samples_readme(samples_dir, card_name=card_name, provenance=provenance)
+    return {"card_dir": card_dir, "manifest": manifest, "bytes": size}
+
+
+def _build_parser() -> argparse.ArgumentParser:
+    p = argparse.ArgumentParser(prog="make-sample", description="raw clip -> the shipped demo card")
+    p.add_argument("source", type=Path)
+    p.add_argument(
+        "--samples-dir", type=Path, default=Path(__file__).resolve().parent.parent / "samples"
+    )
+    p.add_argument("--card-name", default="card-01")
+    p.add_argument("--provenance", required=True)
+    p.add_argument("--resolution", default=DEFAULT_RESOLUTION)
+    p.add_argument("--max-mb", type=float, default=DEFAULT_MAX_BYTES / (1024 * 1024))
+    return p
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = _build_parser().parse_args(argv)
+    result = make_sample(
+        args.source,
+        args.samples_dir,
+        card_name=args.card_name,
+        provenance=args.provenance,
+        resolution=args.resolution,
+        max_bytes=int(args.max_mb * 1024 * 1024),
+    )
+    print(f"card: {result['card_dir']} ({result['bytes'] / (1024 * 1024):.2f} MB)")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

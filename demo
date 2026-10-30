@@ -1,0 +1,237 @@
+#!/usr/bin/env python3
+"""./demo — run kai_slice end to end on the sample card and print Measured
+Performance: one timing row per stage plus the total.
+
+Offline: a local model directory is required (see ``scripts/fetch-model``);
+this never falls back to a network fetch itself, so the only outbound
+connection in the tree stays ``scripts/fetch-model``'s. The
+``KAI_SLICE_STT_REPLAY_DIR`` hook (same one ``kai_slice.run`` documents)
+lets a model-free run exercise the rest of the pipeline for real.
+"""
+
+from __future__ import annotations
+
+import argparse
+import os
+import shutil
+import subprocess
+import sys
+from pathlib import Path
+
+from av.error import FFmpegError
+
+ROOT = Path(__file__).resolve().parent
+sys.path.insert(0, str(ROOT))
+
+from kai_slice.record import RunRecord  # noqa: E402
+from kai_slice.run import run_pipeline  # noqa: E402
+from kai_slice.transcribe import DEFAULT_MODEL  # noqa: E402
+
+DEFAULT_CARD = ROOT / "samples" / "card-01"
+DEFAULT_OUT = ROOT / "demo-out"
+DEFAULT_MODELS_ROOT = ROOT / "models"
+REPLAY_ENV = "KAI_SLICE_STT_REPLAY_DIR"
+
+#: Written into every ``--out`` directory this script creates, with
+#: :data:`MARKER_TOKEN` as its exact content. A later run only deletes an
+#: existing ``--out`` when that marker is a regular file (not a symlink)
+#: holding exactly that token -- so an unrelated directory, a copied tree or a
+#: hand-made empty marker is never silently destroyed.
+MARKER_NAME = ".kai-demo-out"
+MARKER_TOKEN = "kai_slice ./demo output directory: ./demo may replace this tree\n"
+
+#: Every top-level entry a ``./demo`` run writes into ``--out``: the marker,
+#: plus what :func:`kai_slice.run.run_pipeline` writes (capture's ``ingest/``,
+#: ``transcripts/``, ``decision.json``, act's ``cut.mp4`` + ``edit.xml``, the
+#: ``run-record.jsonl`` and ``console/``). A marked ``--out`` holding anything
+#: else is refused, never deleted (``tests/test_demo.py`` pins this set).
+DEMO_ENTRIES = frozenset(
+    {
+        MARKER_NAME,
+        "console",
+        "cut.mp4",
+        "decision.json",
+        "edit.xml",
+        "ingest",
+        "run-record.jsonl",
+        "transcripts",
+    }
+)
+
+
+class DemoOutputError(RuntimeError):
+    """``--out`` is unsafe to use: a file, a symlink, a protected directory
+    (``/``, ``$HOME``, the cwd, this tree or anything containing them), a
+    non-empty directory this script did not itself create, or a marked one
+    that also holds entries this script never writes."""
+
+
+def _protected(resolved: Path) -> bool:
+    """``/``, ``$HOME``, the cwd, this tree, or any directory containing
+    ``$HOME`` or this tree."""
+    home, cwd = Path.home().resolve(), Path.cwd().resolve()
+    if resolved in {Path(resolved.anchor), home, cwd, ROOT}:
+        return True
+    return resolved in ROOT.parents or resolved in home.parents
+
+
+def _refuse_marker(out: Path, marker: Path) -> None:
+    if marker.is_symlink():
+        raise DemoOutputError(f"--out {out}: its {MARKER_NAME} marker is a symlink -- refusing")
+    if not marker.is_file():
+        raise DemoOutputError(
+            f"--out {out}: its {MARKER_NAME} marker is not a regular file -- refusing"
+        )
+    try:
+        token = marker.read_text(errors="replace")
+    except OSError as exc:
+        raise DemoOutputError(
+            f"--out {out}: cannot read its {MARKER_NAME} marker ({exc.strerror}) -- refusing"
+        ) from None
+    if token != MARKER_TOKEN:
+        raise DemoOutputError(
+            f"--out {out}: its {MARKER_NAME} marker does not identify this script's "
+            "output -- refusing to delete it. Pick an empty or non-existent --out."
+        )
+
+
+def _refuse_foreign(out: Path) -> None:
+    """Refuse unless every top-level entry of a marked ``out`` is one
+    :data:`DEMO_ENTRIES` names -- a user's file is never deleted with it."""
+    foreign = sorted(p.name for p in out.iterdir() if p.name not in DEMO_ENTRIES)
+    if foreign:
+        raise DemoOutputError(
+            f"--out {out} holds entries ./demo did not write: {foreign} -- refusing to "
+            "delete them. Move them out, or pick an empty or non-existent --out."
+        )
+
+
+def _check_owned(out: Path) -> None:
+    """Refuse unless ``out`` is wholly this script's previous output."""
+    _refuse_marker(out, out / MARKER_NAME)
+    _refuse_foreign(out)
+
+
+def _check_out_dir(out: Path) -> bool:
+    """Refuse an unsafe ``out`` WITHOUT touching it; return True when it is
+    this script's own previous output, to be replaced."""
+    if out.is_symlink():
+        raise DemoOutputError(f"--out {out} is a symlink -- refusing to write through it")
+    if _protected(out.resolve()):
+        raise DemoOutputError(f"--out {out} is a protected directory -- refusing")
+    if not out.exists():
+        return False
+    if not out.is_dir():
+        raise DemoOutputError(f"--out is a file, not a directory: {out}")
+    marker = out / MARKER_NAME
+    if marker.is_symlink() or marker.exists():
+        _check_owned(out)
+        return True
+    if any(out.iterdir()):
+        raise DemoOutputError(
+            f"--out {out} already exists, is non-empty, and carries no "
+            f"{MARKER_NAME} marker -- refusing to delete content this script "
+            "did not create. Pick an empty or non-existent --out."
+        )
+    return False
+
+
+def _replace_previous(out: Path) -> None:
+    """Rename ``out`` aside, re-check the renamed copy (closing the window
+    between :func:`_check_out_dir` and here), then delete only that copy.
+    A refusal on the re-check moves it back untouched."""
+    aside = out.with_name(f"{out.name}.kai-demo-old-{os.getpid()}")
+    if aside.is_symlink() or aside.exists():
+        raise DemoOutputError(f"--out {out}: {aside} already exists -- refusing to replace")
+    out.rename(aside)
+    try:
+        _check_owned(aside)
+    except DemoOutputError:
+        aside.rename(out)
+        raise
+    shutil.rmtree(aside)
+
+
+def _prepare_out_dir(out: Path, *, replace: bool) -> None:
+    """Create ``out`` (replacing it when :func:`_check_out_dir` said it is our
+    own previous output) and mark it as this script's."""
+    if replace:
+        _replace_previous(out)
+    out.mkdir(parents=True, exist_ok=True)
+    (out / MARKER_NAME).write_text(MARKER_TOKEN)
+
+
+def _model_arg(model_name: str, models_root: Path) -> str | None:
+    """A local model directory path if fetched, else ``None`` (never a bare
+    model name/id — that would let faster-whisper try its own download)."""
+    model_dir = models_root / model_name
+    return str(model_dir) if model_dir.is_dir() else None
+
+
+def _format_table(rows: list[dict]) -> str:
+    lines = ["Measured Performance", f"  {'stage':<12}{'seconds':>10}"]
+    total = 0.0
+    for row in rows:
+        total += row["wall_seconds"]
+        lines.append(f"  {row['stage']:<12}{row['wall_seconds']:>10.3f}")
+    lines.append(f"  {'total':<12}{total:>10.3f}")
+    return "\n".join(lines)
+
+
+def run_demo(
+    *,
+    card: Path = DEFAULT_CARD,
+    out: Path = DEFAULT_OUT,
+    model_name: str = DEFAULT_MODEL,
+    models_root: Path = DEFAULT_MODELS_ROOT,
+    device: str = "cpu",
+) -> dict:
+    out = Path(out)
+    replace = _check_out_dir(out)  # refuses an unsafe --out; deletes nothing
+    model_path = _model_arg(model_name, models_root)
+    replaying = bool(os.environ.get(REPLAY_ENV))
+    if model_path is None and not replaying:
+        raise RuntimeError(
+            f"model not found under {models_root / model_name}. Run ./scripts/fetch-model first."
+        )
+    _prepare_out_dir(out, replace=replace)  # only now may a previous output go
+    result = run_pipeline(card, out, cue=[], model=model_path or model_name, device=device)
+    rows = RunRecord(out / "run-record.jsonl").rows()
+    return {"result": result, "rows": rows}
+
+
+def _build_parser() -> argparse.ArgumentParser:
+    p = argparse.ArgumentParser(prog="demo", description="run kai_slice on the sample card")
+    p.add_argument("--card", type=Path, default=DEFAULT_CARD)
+    p.add_argument("--out", type=Path, default=DEFAULT_OUT)
+    p.add_argument("--model", default=DEFAULT_MODEL)
+    p.add_argument("--models-root", type=Path, default=DEFAULT_MODELS_ROOT)
+    p.add_argument("--device", default="cpu")
+    return p
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = _build_parser().parse_args(argv)
+    ledger = RunRecord(args.out / "run-record.jsonl")
+    # A refused --out may hold an earlier run's ledger: only rows this
+    # invocation appends may name its failure.
+    start = len(ledger.rows()) if not args.out.is_symlink() and args.out.is_dir() else 0
+    try:
+        data = run_demo(
+            card=args.card,
+            out=args.out,
+            model_name=args.model,
+            models_root=args.models_root,
+            device=args.device,
+        )
+    except (RuntimeError, OSError, subprocess.CalledProcessError, FFmpegError) as exc:
+        message = ledger.last_failure_message(since=start)
+        print(message or str(exc), file=sys.stderr)
+        return 1
+    print(_format_table(data["rows"]))
+    print(f"cut: {data['result']['cut']}")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

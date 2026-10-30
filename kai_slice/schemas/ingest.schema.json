@@ -1,0 +1,80 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "kai_slice/schemas/ingest.schema.json",
+  "title": "IngestResponse",
+  "description": "VENDORED from apps/console/design-export/fixtures/types.ts (IngestResponse + IngestCard). tests/public/ pins this field-for-field.",
+  "$ref": "#/$defs/IngestResponse",
+  "$defs": {
+    "IngestCard": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "camera", "role", "state", "take", "plate_seconds", "approx_gb",
+        "bytes", "audio", "sha256_card", "sha256_nas", "sha256_match", "nas_archive"
+      ],
+      "properties": {
+        "camera": { "enum": ["A", "B", "C"] },
+        "role": { "type": ["string", "null"] },
+        "state": { "enum": ["ingested", "not yet ingested"] },
+        "take": { "type": ["string", "null"] },
+        "plate_seconds": { "type": ["number", "null"] },
+        "approx_gb": { "type": ["number", "null"] },
+        "bytes": { "type": ["integer", "null"] },
+        "audio": {
+          "oneOf": [
+            { "type": "null" },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["source", "present"],
+              "properties": {
+                "source": { "type": "string" },
+                "present": { "type": ["boolean", "null"] }
+              }
+            }
+          ]
+        },
+        "sha256_card": { "type": ["string", "null"] },
+        "sha256_nas": { "type": ["string", "null"] },
+        "sha256_match": { "type": ["boolean", "null"] },
+        "nas_archive": {
+          "oneOf": [
+            { "type": "null" },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["verified", "archived_at"],
+              "properties": {
+                "verified": { "type": ["boolean", "null"] },
+                "archived_at": { "type": ["string", "null"] }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "IngestResponse": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "endpoint", "source", "slug", "brand", "title", "status", "taped_on",
+        "taping_at", "set", "take", "ingest_verified_at", "cards"
+      ],
+      "properties": {
+        "endpoint": { "const": "GET /ingest/{slug}" },
+        "source": { "enum": ["live", "replay", "fixture"] },
+        "slug": { "type": "string" },
+        "brand": { "type": "string" },
+        "title": { "type": "string" },
+        "status": { "enum": ["ingested", "not yet ingested"] },
+        "taped_on": { "type": ["string", "null"] },
+        "taping_at": { "type": ["string", "null"] },
+        "set": { "type": ["string", "null"] },
+        "take": { "type": ["string", "null"] },
+        "ingest_verified_at": { "type": ["string", "null"] },
+        "ingest_started_at": { "type": ["string", "null"] },
+        "cards": { "type": "array", "items": { "$ref": "#/$defs/IngestCard" } }
+      }
+    }
+  }
+}

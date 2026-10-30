@@ -1,0 +1,579 @@
+{
+ "file": "CLIP_0001.mp4",
+ "duration": 33.28,
+ "model": "small",
+ "segments": [
+  {
+   "start": 0.0,
+   "end": 3.62,
+   "text": " Hey, I'm Kevin, and this is Kai Studio.",
+   "words": [
+    {
+     "word": " Hey,",
+     "start": 0.0,
+     "end": 0.92,
+     "probability": 0.7351011037826538
+    },
+    {
+     "word": " I'm",
+     "start": 1.26,
+     "end": 1.48,
+     "probability": 0.993640810251236
+    },
+    {
+     "word": " Kevin,",
+     "start": 1.48,
+     "end": 1.68,
+     "probability": 0.9928394556045532
+    },
+    {
+     "word": " and",
+     "start": 1.96,
+     "end": 2.2,
+     "probability": 0.9886958599090576
+    },
+    {
+     "word": " this",
+     "start": 2.2,
+     "end": 2.6,
+     "probability": 0.9977074861526489
+    },
+    {
+     "word": " is",
+     "start": 2.6,
+     "end": 3.12,
+     "probability": 0.9907417893409729
+    },
+    {
+     "word": " Kai",
+     "start": 3.12,
+     "end": 3.3,
+     "probability": 0.4313984811306
+    },
+    {
+     "word": " Studio.",
+     "start": 3.3,
+     "end": 3.62,
+     "probability": 0.5777186155319214
+    }
+   ]
+  },
+  {
+   "start": 4.54,
+   "end": 6.2,
+   "text": " Social media marketing made easy.",
+   "words": [
+    {
+     "word": " Social",
+     "start": 4.54,
+     "end": 4.76,
+     "probability": 0.9124330282211304
+    },
+    {
+     "word": " media",
+     "start": 4.76,
+     "end": 5.12,
+     "probability": 0.8991119265556335
+    },
+    {
+     "word": " marketing",
+     "start": 5.12,
+     "end": 5.52,
+     "probability": 0.996234118938446
+    },
+    {
+     "word": " made",
+     "start": 5.52,
+     "end": 5.84,
+     "probability": 0.9837813377380371
+    },
+    {
+     "word": " easy.",
+     "start": 5.84,
+     "end": 6.2,
+     "probability": 0.9876434803009033
+    }
+   ]
+  },
+  {
+   "start": 7.02,
+   "end": 10.46,
+   "text": " All I do is shoot video, and the system does the rest.",
+   "words": [
+    {
+     "word": " All",
+     "start": 7.02,
+     "end": 7.38,
+     "probability": 0.9914228320121765
+    },
+    {
+     "word": " I",
+     "start": 7.38,
+     "end": 7.56,
+     "probability": 0.9972872734069824
+    },
+    {
+     "word": " do",
+     "start": 7.56,
+     "end": 7.74,
+     "probability": 0.9990822076797485
+    },
+    {
+     "word": " is",
+     "start": 7.74,
+     "end": 7.88,
+     "probability": 0.9965980648994446
+    },
+    {
+     "word": " shoot",
+     "start": 7.88,
+     "end": 8.06,
+     "probability": 0.9954641461372375
+    },
+    {
+     "word": " video,",
+     "start": 8.06,
+     "end": 8.38,
+     "probability": 0.996147632598877
+    },
+    {
+     "word": " and",
+     "start": 8.82,
+     "end": 9.04,
+     "probability": 0.9935771822929382
+    },
+    {
+     "word": " the",
+     "start": 9.04,
+     "end": 9.16,
+     "probability": 0.9967116117477417
+    },
+    {
+     "word": " system",
+     "start": 9.16,
+     "end": 9.56,
+     "probability": 0.9988154172897339
+    },
+    {
+     "word": " does",
+     "start": 9.56,
+     "end": 9.96,
+     "probability": 0.9935083389282227
+    },
+    {
+     "word": " the",
+     "start": 9.96,
+     "end": 10.14,
+     "probability": 0.9991512298583984
+    },
+    {
+     "word": " rest.",
+     "start": 10.14,
+     "end": 10.46,
+     "probability": 0.9987888932228088
+    }
+   ]
+  },
+  {
+   "start": 10.98,
+   "end": 14.3,
+   "text": " It cuts, it captions, and it gets everything ready to post.",
+   "words": [
+    {
+     "word": " It",
+     "start": 10.98,
+     "end": 11.08,
+     "probability": 0.9964836835861206
+    },
+    {
+     "word": " cuts,",
+     "start": 11.08,
+     "end": 11.4,
+     "probability": 0.9986365437507629
+    },
+    {
+     "word": " it",
+     "start": 11.74,
+     "end": 11.74,
+     "probability": 0.9971025586128235
+    },
+    {
+     "word": " captions,",
+     "start": 11.74,
+     "end": 12.08,
+     "probability": 0.8860687613487244
+    },
+    {
+     "word": " and",
+     "start": 12.68,
+     "end": 12.8,
+     "probability": 0.995213508605957
+    },
+    {
+     "word": " it",
+     "start": 12.8,
+     "end": 12.9,
+     "probability": 0.9912163019180298
+    },
+    {
+     "word": " gets",
+     "start": 12.9,
+     "end": 13.04,
+     "probability": 0.9978212118148804
+    },
+    {
+     "word": " everything",
+     "start": 13.04,
+     "end": 13.48,
+     "probability": 0.9988771080970764
+    },
+    {
+     "word": " ready",
+     "start": 13.48,
+     "end": 13.76,
+     "probability": 0.9994634985923767
+    },
+    {
+     "word": " to",
+     "start": 13.76,
+     "end": 13.92,
+     "probability": 0.9996856451034546
+    },
+    {
+     "word": " post.",
+     "start": 13.92,
+     "end": 14.3,
+     "probability": 0.9972792267799377
+    }
+   ]
+  },
+  {
+   "start": 16.080000000000002,
+   "end": 17.62,
+   "text": " But not until I say yes.",
+   "words": [
+    {
+     "word": " But",
+     "start": 15.82,
+     "end": 16.1,
+     "probability": 0.9935985803604126
+    },
+    {
+     "word": " not",
+     "start": 16.1,
+     "end": 16.36,
+     "probability": 0.9865387678146362
+    },
+    {
+     "word": " until",
+     "start": 16.36,
+     "end": 16.84,
+     "probability": 0.9969102740287781
+    },
+    {
+     "word": " I",
+     "start": 16.84,
+     "end": 17.14,
+     "probability": 0.998871386051178
+    },
+    {
+     "word": " say",
+     "start": 17.14,
+     "end": 17.32,
+     "probability": 0.9833207726478577
+    },
+    {
+     "word": " yes.",
+     "start": 17.32,
+     "end": 17.62,
+     "probability": 0.8849811553955078
+    }
+   ]
+  },
+  {
+   "start": 19.12,
+   "end": 26.04,
+   "text": " It follows my rules, written in my own words, and does basically all of the work for me.",
+   "words": [
+    {
+     "word": " It",
+     "start": 19.12,
+     "end": 19.28,
+     "probability": 0.9811776876449585
+    },
+    {
+     "word": " follows",
+     "start": 19.28,
+     "end": 19.56,
+     "probability": 0.998173713684082
+    },
+    {
+     "word": " my",
+     "start": 19.56,
+     "end": 19.8,
+     "probability": 0.9993901252746582
+    },
+    {
+     "word": " rules,",
+     "start": 19.8,
+     "end": 20.18,
+     "probability": 0.9980529546737671
+    },
+    {
+     "word": " written",
+     "start": 20.46,
+     "end": 20.68,
+     "probability": 0.9978602528572083
+    },
+    {
+     "word": " in",
+     "start": 20.68,
+     "end": 20.86,
+     "probability": 0.9968129992485046
+    },
+    {
+     "word": " my",
+     "start": 20.86,
+     "end": 21.02,
+     "probability": 0.9996477365493774
+    },
+    {
+     "word": " own",
+     "start": 21.02,
+     "end": 21.18,
+     "probability": 0.9973535537719727
+    },
+    {
+     "word": " words,",
+     "start": 21.18,
+     "end": 21.54,
+     "probability": 0.9993896484375
+    },
+    {
+     "word": " and",
+     "start": 22.28,
+     "end": 23.1,
+     "probability": 0.9789591431617737
+    },
+    {
+     "word": " does",
+     "start": 23.1,
+     "end": 23.38,
+     "probability": 0.9507445096969604
+    },
+    {
+     "word": " basically",
+     "start": 23.38,
+     "end": 23.92,
+     "probability": 0.898056149482727
+    },
+    {
+     "word": " all",
+     "start": 23.92,
+     "end": 25.18,
+     "probability": 0.9760251045227051
+    },
+    {
+     "word": " of",
+     "start": 25.18,
+     "end": 25.34,
+     "probability": 0.9905045628547668
+    },
+    {
+     "word": " the",
+     "start": 25.34,
+     "end": 25.44,
+     "probability": 0.9988413453102112
+    },
+    {
+     "word": " work",
+     "start": 25.44,
+     "end": 25.64,
+     "probability": 0.9996860027313232
+    },
+    {
+     "word": " for",
+     "start": 25.64,
+     "end": 25.88,
+     "probability": 0.9994837045669556
+    },
+    {
+     "word": " me.",
+     "start": 25.88,
+     "end": 26.04,
+     "probability": 0.9995506405830383
+    }
+   ]
+  },
+  {
+   "start": 26.54,
+   "end": 27.82,
+   "text": " All I have to do is create.",
+   "words": [
+    {
+     "word": " All",
+     "start": 26.54,
+     "end": 26.78,
+     "probability": 0.9983539581298828
+    },
+    {
+     "word": " I",
+     "start": 26.78,
+     "end": 26.96,
+     "probability": 0.9993526339530945
+    },
+    {
+     "word": " have",
+     "start": 26.96,
+     "end": 27.16,
+     "probability": 0.9995005130767822
+    },
+    {
+     "word": " to",
+     "start": 27.16,
+     "end": 27.28,
+     "probability": 0.9996213912963867
+    },
+    {
+     "word": " do",
+     "start": 27.28,
+     "end": 27.44,
+     "probability": 0.9995346069335938
+    },
+    {
+     "word": " is",
+     "start": 27.44,
+     "end": 27.54,
+     "probability": 0.9982744455337524
+    },
+    {
+     "word": " create.",
+     "start": 27.54,
+     "end": 27.82,
+     "probability": 0.997553288936615
+    }
+   ]
+  },
+  {
+   "start": 28.32,
+   "end": 31.8,
+   "text": " So if you want to give it a test drive, go to the read me and find out how.",
+   "words": [
+    {
+     "word": " So",
+     "start": 28.32,
+     "end": 28.64,
+     "probability": 0.526611328125
+    },
+    {
+     "word": " if",
+     "start": 28.64,
+     "end": 28.8,
+     "probability": 0.7707164883613586
+    },
+    {
+     "word": " you",
+     "start": 28.8,
+     "end": 28.88,
+     "probability": 0.9984486103057861
+    },
+    {
+     "word": " want",
+     "start": 28.88,
+     "end": 29.02,
+     "probability": 0.951520562171936
+    },
+    {
+     "word": " to",
+     "start": 29.02,
+     "end": 29.1,
+     "probability": 0.9972510933876038
+    },
+    {
+     "word": " give",
+     "start": 29.1,
+     "end": 29.22,
+     "probability": 0.9969114661216736
+    },
+    {
+     "word": " it",
+     "start": 29.22,
+     "end": 29.34,
+     "probability": 0.9971244931221008
+    },
+    {
+     "word": " a",
+     "start": 29.34,
+     "end": 29.44,
+     "probability": 0.9977163076400757
+    },
+    {
+     "word": " test",
+     "start": 29.44,
+     "end": 29.6,
+     "probability": 0.9895790219306946
+    },
+    {
+     "word": " drive,",
+     "start": 29.6,
+     "end": 29.94,
+     "probability": 0.9899573922157288
+    },
+    {
+     "word": " go",
+     "start": 30.14,
+     "end": 30.48,
+     "probability": 0.9921554923057556
+    },
+    {
+     "word": " to",
+     "start": 30.48,
+     "end": 30.58,
+     "probability": 0.9948980212211609
+    },
+    {
+     "word": " the",
+     "start": 30.58,
+     "end": 30.68,
+     "probability": 0.9414202570915222
+    },
+    {
+     "word": " read",
+     "start": 30.68,
+     "end": 30.84,
+     "probability": 0.45094409584999084
+    },
+    {
+     "word": " me",
+     "start": 30.84,
+     "end": 30.98,
+     "probability": 0.32457783818244934
+    },
+    {
+     "word": " and",
+     "start": 30.98,
+     "end": 31.3,
+     "probability": 0.9558895826339722
+    },
+    {
+     "word": " find",
+     "start": 31.3,
+     "end": 31.48,
+     "probability": 0.9952357411384583
+    },
+    {
+     "word": " out",
+     "start": 31.48,
+     "end": 31.68,
+     "probability": 0.998649537563324
+    },
+    {
+     "word": " how.",
+     "start": 31.68,
+     "end": 31.8,
+     "probability": 0.9917563199996948
+    }
+   ]
+  }
+ ]
+}

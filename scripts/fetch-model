@@ -1,0 +1,77 @@
+#!/usr/bin/env python3
+"""scripts/fetch-model — the ONE command that opens an outbound connection.
+
+Downloads the configured faster-whisper model once into ``./models/<name>/``
+(sibling to this ``scripts/`` dir, regardless of the caller's cwd). After it
+exits 0, every other `kai_slice` stage is offline: ``./demo`` and
+``python -m kai_slice run`` point ``--model`` at the local directory this
+writes and never touch the network again.
+"""
+
+from __future__ import annotations
+
+import argparse
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+from kai_slice.model import (
+    MODELS_ROOT,
+    ModelDestError,
+    ModelIntegrityError,
+    ModelRevisionError,
+    fetch_model,
+)
+from kai_slice.transcribe import DEFAULT_MODEL
+
+
+def _dir_size(path: Path) -> int:
+    return sum(p.stat().st_size for p in path.rglob("*") if p.is_file())
+
+
+def _build_parser() -> argparse.ArgumentParser:
+    p = argparse.ArgumentParser(
+        prog="fetch-model", description="download the faster-whisper model once, then go offline"
+    )
+    p.add_argument(
+        "--model", default=DEFAULT_MODEL, help=f"model size or HF id (default: {DEFAULT_MODEL})"
+    )
+    p.add_argument(
+        "--dest",
+        type=Path,
+        default=None,
+        help="override the destination (must be absent, empty, or this model's own directory)",
+    )
+    p.add_argument(
+        "--allow-unpinned",
+        action="store_true",
+        help="fetch a model with no sha256 shipped in kai_slice/model_pins.py (unverified)",
+    )
+    return p
+
+
+UNPINNED_WARNING = (
+    "fetch-model: WARNING: --allow-unpinned -- a model with no shipped sha256 is NOT "
+    "verified: you get whatever upstream serves today."
+)
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = _build_parser().parse_args(argv)
+    dest = args.dest or (MODELS_ROOT / args.model)
+    if args.allow_unpinned:
+        print(UNPINNED_WARNING, file=sys.stderr)
+    try:
+        result = fetch_model(args.model, dest, allow_unpinned=args.allow_unpinned)
+    except (ModelDestError, ModelIntegrityError, ModelRevisionError) as exc:
+        print(str(exc), file=sys.stderr)
+        return 1
+    size_mb = _dir_size(result) / (1024 * 1024)
+    print(f"{args.model}: {size_mb:.1f} MB -> {result}")
+    print("Offline from here: point --model at this directory.")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

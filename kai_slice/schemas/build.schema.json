@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "kai_slice/schemas/build.schema.json",
+  "title": "BuildResponse",
+  "description": "VENDORED from apps/console/design-export/fixtures/types.ts (BuildResponse + BuildStep). tests/public/ pins this field-for-field.",
+  "$ref": "#/$defs/BuildResponse",
+  "$defs": {
+    "BuildStepName": {
+      "enum": ["capture", "transcribe", "decide", "act"]
+    },
+    "BuildStep": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name", "state", "rc", "wall_seconds", "input_sha256",
+        "output_sha256", "refusal_reason", "output"
+      ],
+      "properties": {
+        "name": { "$ref": "#/$defs/BuildStepName" },
+        "state": { "enum": ["ran", "reused", "refused", "not run yet"] },
+        "rc": { "type": ["integer", "null"] },
+        "wall_seconds": { "type": ["number", "null"] },
+        "input_sha256": { "type": ["string", "null"] },
+        "output_sha256": { "type": ["string", "null"] },
+        "refusal_reason": { "type": ["string", "null"] },
+        "refusal_ruling": { "type": ["string", "null"] },
+        "gates": {
+          "oneOf": [
+            { "type": "null" },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["id", "passed"],
+                "properties": {
+                  "id": { "type": ["string", "null"] },
+                  "passed": { "type": ["boolean", "null"] }
+                }
+              }
+            }
+          ]
+        },
+        "output": {
+          "oneOf": [
+            { "type": "null" },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "duration_s": { "type": "number" },
+                "clips": { "type": "integer" }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "BuildResponse": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "endpoint", "source", "slug", "brand", "title", "status", "stopped_at", "steps"
+      ],
+      "properties": {
+        "endpoint": { "const": "GET /build/{slug}" },
+        "source": { "enum": ["live", "replay", "fixture"] },
+        "slug": { "type": "string" },
+        "brand": { "type": "string" },
+        "title": { "type": "string" },
+        "status": { "enum": ["running", "refused", "done"] },
+        "stopped_at": {
+          "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/BuildStepName" }]
+        },
+        "steps": { "type": "array", "items": { "$ref": "#/$defs/BuildStep" } }
+      }
+    }
+  }
+}

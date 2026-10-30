@@ -1,0 +1,104 @@
+#!/usr/bin/env python3
+"""scripts/make-stand-in-sample — the committed, free, offline stand-in clip.
+
+espeak-ng (a system package with built-in voices, no download — NOT
+piper-tts, whose voices come over the network) speaks ``DEFAULT_TEXT`` into a
+WAV, padded/trimmed to an exact duration, laid over an ffmpeg lavfi test
+picture. The result is a raw "source clip" of the same shape as a real
+delivered take, so ``scripts/make-sample`` can build and test the whole
+pipeline before the owner's real footage exists. Opens no network connection.
+"""
+
+from __future__ import annotations
+
+import argparse
+import subprocess
+import tempfile
+from pathlib import Path
+
+DEFAULT_TEXT = (
+    "Hi, I'm testing the kai slice pipeline. This is a stand-in clip, "
+    "generated locally with espeak-ng over a test pattern -- no real "
+    "footage -- so the build and the demo do not have to wait on a real "
+    "delivered take. Capture, transcribe, decide, and act all run on "
+    "this clip exactly as they would on a real one."
+)
+DEFAULT_SECONDS = 90.0
+DEFAULT_RESOLUTION = "3840x2160"
+
+
+def _speak(text: str, out_wav: Path) -> None:
+    subprocess.run(["espeak-ng", "-v", "en", "-w", str(out_wav), text], check=True)
+
+
+def _pad_or_trim(src_wav: Path, dest_wav: Path, seconds: float) -> None:
+    subprocess.run(
+        ["ffmpeg", "-y", "-i", str(src_wav), "-af", "apad", "-t", str(seconds), str(dest_wav)],
+        check=True,
+        capture_output=True,
+    )
+
+
+def generate_stand_in(
+    out: Path,
+    *,
+    seconds: float = DEFAULT_SECONDS,
+    resolution: str = DEFAULT_RESOLUTION,
+    text: str = DEFAULT_TEXT,
+) -> Path:
+    """A synthetic ``seconds``-long, ``resolution`` clip: espeak-ng speech
+    over a solid lavfi picture. Returns ``out``."""
+    out = Path(out)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory() as tmp:
+        raw_wav = Path(tmp) / "speech.wav"
+        padded_wav = Path(tmp) / "padded.wav"
+        _speak(text, raw_wav)
+        _pad_or_trim(raw_wav, padded_wav, seconds)
+        subprocess.run(
+            [
+                "ffmpeg",
+                "-y",
+                "-f",
+                "lavfi",
+                "-i",
+                f"color=c=gray:s={resolution}:r=30:d={seconds}",
+                "-i",
+                str(padded_wav),
+                "-shortest",
+                "-c:v",
+                "libx264",
+                "-pix_fmt",
+                "yuv420p",
+                "-c:a",
+                "aac",
+                str(out),
+            ],
+            check=True,
+            capture_output=True,
+        )
+    return out
+
+
+def _build_parser() -> argparse.ArgumentParser:
+    p = argparse.ArgumentParser(
+        prog="make-stand-in-sample", description="generate a synthetic stand-in source clip"
+    )
+    p.add_argument("--out", type=Path, required=True)
+    p.add_argument("--seconds", type=float, default=DEFAULT_SECONDS)
+    p.add_argument("--resolution", default=DEFAULT_RESOLUTION)
+    p.add_argument("--text", default=DEFAULT_TEXT)
+    return p
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = _build_parser().parse_args(argv)
+    result = generate_stand_in(
+        args.out, seconds=args.seconds, resolution=args.resolution, text=args.text
+    )
+    print(f"stand-in clip: {result}")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
